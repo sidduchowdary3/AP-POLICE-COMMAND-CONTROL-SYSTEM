@@ -25,9 +25,7 @@ The **AP Police Command Control System** is a modern, full-stack platform design
 
 ## 🎥 System Walkthrough
 
-> **Note:** A detailed walkthrough video demonstrating the login process for all three roles (Super Admin, Command Officer, and Police Personnel) and their respective live dashboards will be added here soon.
-
-*(Place video link or GIF here)*
+![System Walkthrough Video](frontend/assets/walkthrough.webp)
 
 ---
 
