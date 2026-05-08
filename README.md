@@ -25,7 +25,8 @@ The **AP Police Command Control System** is a modern, full-stack platform design
 
 ## 🎥 System Walkthrough
 
-*(The automated recording failed due to Canvas rendering. Please manually record and place your video here!)*
+> **Note:** Here is an automated walkthrough demonstrating the system UI.
+![System Walkthrough Video](frontend/assets/walkthrough.webm)
 
 ---
 
