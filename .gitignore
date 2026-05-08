@@ -1,0 +1,15 @@
+node_modules/
+build/
+dist/
+.dart_tool/
+.packages
+.pub-cache/
+.pub/
+*.log
+.env
+.idea/
+.vscode/
+*.sqlite
+*.sqlite-journal
+dev.db
+dev.db-journal

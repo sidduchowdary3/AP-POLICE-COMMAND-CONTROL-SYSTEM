@@ -1,0 +1,52 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  role      String   @default("PERSONNEL") // "SUPER_ADMIN", "COMMAND_OFFICER", "PERSONNEL"
+  stationId String?
+  station   Station? @relation(fields: [stationId], references: [id])
+  locations Location[]
+  alerts    Alert[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Station {
+  id        String   @id @default(uuid())
+  name      String
+  location  String
+  users     User[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Location {
+  id        String   @id @default(uuid())
+  lat       Float
+  lng       Float
+  timestamp DateTime @default(now())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, timestamp])
+}
+
+model Alert {
+  id        String   @id @default(uuid())
+  type      String   // e.g., "BACKUP_REQUEST", "SOS"
+  status    String   @default("ACTIVE") // ACTIVE, RESOLVED
+  lat       Float
+  lng       Float
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
