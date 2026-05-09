@@ -4,8 +4,9 @@ import 'package:police_command_system/src/core/theme/app_theme.dart';
 
 class AlertFeed extends StatelessWidget {
   final List<dynamic> alerts;
+  final Function(String unitId)? onDispatch;
 
-  const AlertFeed({super.key, required this.alerts});
+  const AlertFeed({super.key, required this.alerts, this.onDispatch});
 
   @override
   Widget build(BuildContext context) {
@@ -51,11 +52,12 @@ class AlertFeed extends StatelessWidget {
                     padding: const EdgeInsets.all(16),
                     children: alerts.map((alert) {
                       return _buildAlertCard(
-                        type: alert['type'],
-                        unit: alert['unit'],
-                        location: alert['location'],
-                        time: alert['time'],
-                        isCritical: alert['isCritical'],
+                        context: context,
+                        type: alert['type'] ?? 'ALERT',
+                        unit: alert['unit'] ?? 'Unknown',
+                        location: alert['location'] ?? '',
+                        time: alert['time'] ?? 'Just now',
+                        isCritical: alert['isCritical'] == true,
                       );
                     }).toList(),
                   ),
@@ -66,6 +68,7 @@ class AlertFeed extends StatelessWidget {
   }
 
   Widget _buildAlertCard({
+    required BuildContext context,
     required String type,
     required String unit,
     required String location,
@@ -97,13 +100,16 @@ class AlertFeed extends StatelessWidget {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Text(
-                      type,
-                      style: TextStyle(
-                        color: color,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                        letterSpacing: 1.0,
+                    Expanded(
+                      child: Text(
+                        type,
+                        style: TextStyle(
+                          color: color,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          letterSpacing: 1.0,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     Text(time, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
@@ -116,12 +122,110 @@ class AlertFeed extends StatelessWidget {
                   children: [
                     const Icon(Icons.location_on, size: 14, color: AppTheme.textSecondary),
                     const SizedBox(width: 4),
-                    Text(location, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+                    Expanded(child: Text(location, style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12), overflow: TextOverflow.ellipsis)),
                   ],
                 ),
+                if (isCritical) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.accentRed,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                      ),
+                      icon: const Icon(Icons.local_police, size: 18),
+                      label: const Text('ASSIGN BACKUP', style: TextStyle(fontWeight: FontWeight.bold, letterSpacing: 1.0)),
+                      onPressed: () {
+                        _showAssignBackupDialog(context, unit, location);
+                      },
+                    ),
+                  )
+                ]
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  void _showAssignBackupDialog(BuildContext context, String requestingUnit, String location) {
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 400,
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.local_shipping, color: AppTheme.accentYellow, size: 32),
+                  SizedBox(width: 16),
+                  Text('DISPATCH BACKUP', style: TextStyle(color: AppTheme.accentYellow, fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 1.5)),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Text('Select an available nearby unit to dispatch to:', style: TextStyle(color: AppTheme.textSecondary)),
+              const SizedBox(height: 8),
+              Text(location, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 24),
+              
+              // Mock available units
+              _buildUnitDispatchOption(context, 'VJA-2B', 'Suresh, P.', '2.4 km away'),
+              _buildUnitDispatchOption(context, 'GNT-4D', 'Rao, M.', '5.1 km away'),
+              _buildUnitDispatchOption(context, 'KKD-7G', 'Varma, B.', '8.0 km away'),
+              
+              const SizedBox(height: 24),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('CANCEL', style: TextStyle(color: AppTheme.textSecondary)),
+              )
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUnitDispatchOption(BuildContext context, String unitId, String officer, String distance) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      decoration: BoxDecoration(
+        color: AppTheme.background,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.surfaceLight),
+      ),
+      child: ListTile(
+        leading: const CircleAvatar(backgroundColor: AppTheme.accentGreen, child: Icon(Icons.directions_car, color: Colors.white, size: 20)),
+        title: Text(unitId, style: const TextStyle(color: AppTheme.textPrimary, fontWeight: FontWeight.bold)),
+        subtitle: Text('$officer • $distance', style: const TextStyle(color: AppTheme.textSecondary, fontSize: 12)),
+        trailing: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: AppTheme.accentYellow,
+            foregroundColor: Colors.black,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          ),
+          onPressed: () {
+            Navigator.of(context).pop();
+            if (onDispatch != null) {
+              onDispatch!(unitId);
+            }
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('✅ $unitId successfully dispatched to assist!'),
+                backgroundColor: AppTheme.accentGreen,
+              ),
+            );
+          },
+          child: const Text('DISPATCH', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
         ),
       ),
     );

@@ -24,6 +24,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
   int _selectedIndex = 0;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  final TextEditingController _emailCtrl = TextEditingController();
+  final TextEditingController _passCtrl = TextEditingController();
+  bool _isCreatingPersonnel = false;
+  
   String _loggedInEmail = 'Officer';
   String _loggedInRole = 'COMMAND_OFFICER';
 
@@ -42,6 +46,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _loggedInRole = prefs.getString('role') ?? 'COMMAND_OFFICER';
       });
     }
+  }
+
+  void _handleDispatch(String unitId) {
+    if (!mounted) return;
+    setState(() {
+      for (var i = 0; i < activeUnits.length; i++) {
+        if (activeUnits[i]['id'] == unitId) {
+          // Update the unit status locally for immediate feedback
+          final updatedUnit = Map<String, dynamic>.from(activeUnits[i]);
+          updatedUnit['status'] = 'EN ROUTE';
+          activeUnits[i] = updatedUnit;
+          break;
+        }
+      }
+    });
   }
 
   void _initSocket() {
@@ -84,6 +103,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void dispose() {
     socket.dispose();
     _searchController.dispose();
+    _emailCtrl.dispose();
+    _passCtrl.dispose();
     super.dispose();
   }
 
@@ -168,7 +189,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
             ),
             const SizedBox(width: 24),
-            Expanded(flex: 1, child: AlertFeed(alerts: alerts)),
+            Expanded(flex: 1, child: AlertFeed(alerts: alerts, onDispatch: _handleDispatch)),
           ],
         );
       
@@ -201,9 +222,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Expanded(
               child: Row(
                 children: [
-                  Expanded(child: AlertFeed(alerts: alerts.where((a) => a['isCritical'] == true).toList())),
+                  Expanded(child: AlertFeed(alerts: alerts.where((a) => a['isCritical'] == true).toList(), onDispatch: _handleDispatch)),
                   const SizedBox(width: 24),
-                  Expanded(child: AlertFeed(alerts: alerts.where((a) => a['isCritical'] != true).toList())),
+                  Expanded(child: AlertFeed(alerts: alerts.where((a) => a['isCritical'] != true).toList(), onDispatch: _handleDispatch)),
                 ],
               ),
             ),
@@ -228,37 +249,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     itemBuilder: (context, index) {
                       final alert = alerts[alerts.length - 1 - index]; // Newest first
                       final isCritical = alert['isCritical'] == true;
-                      return Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: AppTheme.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: isCritical ? AppTheme.accentRed.withOpacity(0.5) : AppTheme.surfaceLight),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(isCritical ? Icons.warning_rounded : Icons.info_outline,
-                                color: isCritical ? AppTheme.accentRed : AppTheme.accentCyan, size: 32),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(alert['message'] ?? 'Alert', style: TextStyle(color: isCritical ? AppTheme.accentRed : AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
-                                  const SizedBox(height: 4),
-                                  Text('Unit: ${alert['unitId'] ?? 'Unknown'} | Lat: ${(alert['lat'] ?? 0.0).toStringAsFixed(4)}, Lng: ${(alert['lng'] ?? 0.0).toStringAsFixed(4)}',
-                                    style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
-                                ],
+                      return InkWell(
+                        onTap: () {
+                          _showIncidentDetails(context, alert);
+                        },
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: AppTheme.surface,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: isCritical ? AppTheme.accentRed.withOpacity(0.5) : AppTheme.surfaceLight),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(isCritical ? Icons.warning_rounded : Icons.info_outline,
+                                  color: isCritical ? AppTheme.accentRed : AppTheme.accentCyan, size: 32),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(alert['message'] ?? 'Alert', style: TextStyle(color: isCritical ? AppTheme.accentRed : AppTheme.textPrimary, fontWeight: FontWeight.bold, fontSize: 16)),
+                                    const SizedBox(height: 4),
+                                    Text('Unit: ${alert['unitId'] ?? 'Unknown'} | Lat: ${(alert['lat'] ?? 0.0).toStringAsFixed(4)}, Lng: ${(alert['lng'] ?? 0.0).toStringAsFixed(4)}',
+                                      style: const TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                                  ],
+                                ),
                               ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(color: isCritical ? AppTheme.accentRed.withOpacity(0.1) : AppTheme.accentCyan.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
-                              child: Text(isCritical ? 'CRITICAL' : 'INFO',
-                                style: TextStyle(color: isCritical ? AppTheme.accentRed : AppTheme.accentCyan, fontWeight: FontWeight.bold, fontSize: 12)),
-                            )
-                          ],
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(color: isCritical ? AppTheme.accentRed.withOpacity(0.1) : AppTheme.accentCyan.withOpacity(0.1), borderRadius: BorderRadius.circular(8)),
+                                child: Text(isCritical ? 'CRITICAL' : 'INFO',
+                                  style: TextStyle(color: isCritical ? AppTheme.accentRed : AppTheme.accentCyan, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                              const SizedBox(width: 16),
+                              const Icon(Icons.chevron_right, color: AppTheme.textSecondary),
+                            ],
+                          ),
                         ),
                       );
                     },
@@ -271,29 +299,163 @@ class _DashboardScreenState extends State<DashboardScreen> {
         return _buildManagePersonnelView();
 
       case 6: // Settings
-        return Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.settings, size: 100, color: AppTheme.surfaceLight),
-              SizedBox(height: 24),
-              Text('SYSTEM PREFERENCES', style: TextStyle(color: AppTheme.textSecondary, fontSize: 24, letterSpacing: 2.0)),
-              SizedBox(height: 8),
-              Text('Module locked. Administrator clearance required.', style: TextStyle(color: AppTheme.textSecondary)),
-            ],
-          ),
-        );
+        return _buildSettingsView();
 
       default:
         return const SizedBox();
     }
   }
 
-  Widget _buildManagePersonnelView() {
-    final emailCtrl = TextEditingController();
-    final passCtrl = TextEditingController();
-    bool isCreating = false;
+  Widget _buildSettingsView() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Text('SYSTEM PREFERENCES', style: TextStyle(color: AppTheme.textPrimary, fontSize: 20, fontWeight: FontWeight.bold, letterSpacing: 2.0)),
+        const SizedBox(height: 24),
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                flex: 1,
+                child: Column(
+                  children: [
+                    _buildSettingsCard('Map Preferences', Icons.map, [
+                      _buildSettingsToggle('Satellite View Overlay', true),
+                      _buildSettingsToggle('Live Traffic Data', false),
+                      _buildSettingsToggle('Auto-Center on Critical Alerts', true),
+                    ]),
+                    const SizedBox(height: 24),
+                    _buildSettingsCard('Notification Settings', Icons.notifications, [
+                      _buildSettingsToggle('Enable Desktop Notifications', true),
+                      _buildSettingsToggle('Sound: Critical Emergency', true),
+                      _buildSettingsToggle('Sound: Standard Dispatch', false),
+                    ]),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 24),
+              Expanded(
+                flex: 1,
+                child: Column(
+                  children: [
+                    _buildSettingsCard('System Health & Integrity', Icons.monitor_heart, [
+                      _buildStatusRow('Database Connection', 'POSTGRES-ACTIVE', AppTheme.accentGreen),
+                      _buildStatusRow('WebSocket Relay', 'CONNECTED', AppTheme.accentGreen),
+                      _buildStatusRow('GPS Polling Rate', '3s (OPTIMAL)', AppTheme.accentCyan),
+                      _buildStatusRow('State Firewall', 'SECURED', AppTheme.accentGreen),
+                    ]),
+                    const SizedBox(height: 24),
+                    Container(
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surface,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppTheme.accentRed.withOpacity(0.5)),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(Icons.warning_amber_rounded, color: AppTheme.accentRed),
+                              SizedBox(width: 8),
+                              Text('DANGER ZONE', style: TextStyle(color: AppTheme.accentRed, fontWeight: FontWeight.bold, fontSize: 16)),
+                            ],
+                          ),
+                          const SizedBox(height: 16),
+                          const Text('These actions require Super Admin clearance and multi-factor authentication.', style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
+                          const SizedBox(height: 24),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              style: OutlinedButton.styleFrom(foregroundColor: AppTheme.accentRed, side: const BorderSide(color: AppTheme.accentRed)),
+                              onPressed: () {},
+                              child: const Text('PURGE SESSION LOGS'),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
 
+  Widget _buildSettingsCard(String title, IconData icon, List<Widget> children) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.surfaceLight),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: AppTheme.accentCyan),
+              const SizedBox(width: 12),
+              Text(title, style: const TextStyle(color: AppTheme.textPrimary, fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: AppTheme.surfaceLight),
+          const SizedBox(height: 8),
+          ...children,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSettingsToggle(String label, bool initialValue) {
+    return StatefulBuilder(
+      builder: (context, setLocalState) {
+        return Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label, style: const TextStyle(color: AppTheme.textSecondary)),
+              Switch(
+                value: initialValue,
+                activeColor: AppTheme.accentCyan,
+                onChanged: (val) => setLocalState(() => initialValue = val),
+              ),
+            ],
+          ),
+        );
+      }
+    );
+  }
+
+  Widget _buildStatusRow(String label, String status, Color statusColor) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 12),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: AppTheme.textSecondary)),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(status, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildManagePersonnelView() {
     return StatefulBuilder(builder: (context, setLocalState) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -317,7 +479,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           style: TextStyle(color: AppTheme.textSecondary, fontSize: 13)),
                       const SizedBox(height: 24),
                       TextField(
-                        controller: emailCtrl,
+                        controller: _emailCtrl,
                         style: const TextStyle(color: AppTheme.textPrimary),
                         decoration: InputDecoration(
                           labelText: 'Officer Email / Badge ID',
@@ -330,7 +492,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       const SizedBox(height: 16),
                       TextField(
-                        controller: passCtrl,
+                        controller: _passCtrl,
                         obscureText: true,
                         style: const TextStyle(color: AppTheme.textPrimary),
                         decoration: InputDecoration(
@@ -348,21 +510,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
                         height: 50,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(backgroundColor: AppTheme.accentCyan, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
-                          icon: isCreating ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.person_add, color: Colors.white),
+                          icon: _isCreatingPersonnel ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.person_add, color: Colors.white),
                           label: const Text('CREATE OFFICER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                          onPressed: isCreating ? null : () async {
-                            setLocalState(() => isCreating = true);
+                          onPressed: _isCreatingPersonnel ? null : () async {
+                            setLocalState(() => _isCreatingPersonnel = true);
                             try {
                               final prefs = await SharedPreferences.getInstance();
                               final token = prefs.getString('jwt');
                               final dio = Dio();
                               await dio.post(
                                 'http://localhost:3000/api/users',
-                                data: {'email': emailCtrl.text, 'password': passCtrl.text, 'role': 'PERSONNEL'},
-                                options: Options(headers: {'Authorization': 'Bearer \$token'}),
+                                data: {'email': _emailCtrl.text, 'password': _passCtrl.text, 'role': 'PERSONNEL'},
+                                options: Options(headers: {'Authorization': 'Bearer $token'}),
                               );
-                              emailCtrl.clear();
-                              passCtrl.clear();
+                              _emailCtrl.clear();
+                              _passCtrl.clear();
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(content: Text('✅ Police Personnel account created successfully!'), backgroundColor: AppTheme.accentGreen),
@@ -375,7 +537,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 );
                               }
                             } finally {
-                              setLocalState(() => isCreating = false);
+                              setLocalState(() => _isCreatingPersonnel = false);
                             }
                           },
                         ),
@@ -666,6 +828,93 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   onPressed: () => Navigator.of(context).pop(),
                   child: const Text('CLOSE', style: TextStyle(color: AppTheme.background, fontWeight: FontWeight.bold)),
                 ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showIncidentDetails(BuildContext context, dynamic alert) {
+    final isCritical = alert['isCritical'] == true;
+    final color = isCritical ? AppTheme.accentRed : AppTheme.accentCyan;
+    
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: AppTheme.surface,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        child: Container(
+          width: 500,
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(isCritical ? Icons.warning_rounded : Icons.info_outline, color: color, size: 40),
+                  const SizedBox(width: 16),
+                  Expanded(child: Text('INCIDENT REPORT', style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.bold, letterSpacing: 2.0))),
+                ],
+              ),
+              const SizedBox(height: 24),
+              const Divider(color: AppTheme.surfaceLight),
+              const SizedBox(height: 24),
+              
+              _buildProfileDetailRow(Icons.category, 'Incident Type', alert['message'] ?? 'Unknown Event'),
+              const SizedBox(height: 16),
+              _buildProfileDetailRow(Icons.directions_car, 'Responding Unit', alert['unitId'] ?? 'Unknown Unit'),
+              const SizedBox(height: 16),
+              _buildProfileDetailRow(Icons.location_on, 'Coordinates', '${alert['lat']?.toStringAsFixed(6)}, ${alert['lng']?.toStringAsFixed(6)}'),
+              const SizedBox(height: 16),
+              _buildProfileDetailRow(Icons.access_time, 'Time of Report', DateTime.now().toString().substring(0, 16)),
+              const SizedBox(height: 24),
+              
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(color: AppTheme.background, borderRadius: BorderRadius.circular(12)),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('CASE SUMMARY', style: TextStyle(color: AppTheme.textSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Unit ${alert['unitId']} is currently on scene at the specified coordinates. '
+                      'The incident has been classified as a ${isCritical ? "CRITICAL" : "STANDARD"} priority event. '
+                      'Standard operating procedures have been initiated. '
+                      'Awaiting further update from field personnel.',
+                      style: const TextStyle(color: AppTheme.textPrimary, height: 1.5),
+                    ),
+                  ],
+                ),
+              ),
+              
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    child: const Text('CLOSE REPORT', style: TextStyle(color: AppTheme.textSecondary)),
+                  ),
+                  const SizedBox(width: 16),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: color,
+                      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () {
+                      Navigator.of(context).pop();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Status updated for Unit ${alert['unitId']}'), backgroundColor: AppTheme.accentGreen),
+                      );
+                    },
+                    child: const Text('MARK RESOLVED', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                  ),
+                ],
               ),
             ],
           ),

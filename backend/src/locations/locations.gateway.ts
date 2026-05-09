@@ -99,11 +99,11 @@ export class LocationsGateway implements OnGatewayConnection, OnGatewayDisconnec
 
       this.server.emit('syncUnits', this.units);
 
-      // Randomly trigger an AP-relevant alert
-      if (Math.random() > 0.8) {
+      // Randomly trigger an AP-relevant alert (Increased frequency for demo)
+      if (Math.random() > 0.3) {
         const selectedUnit = this.units[Math.floor(Math.random() * this.units.length)];
         const incidentType = this.AP_INCIDENTS[Math.floor(Math.random() * this.AP_INCIDENTS.length)];
-        const isCritical = Math.random() > 0.7;
+        const isCritical = Math.random() > 0.4; // Make more of them critical so Assign Backup appears
         const newAlert = {
           type: incidentType,
           unitId: selectedUnit.id,
