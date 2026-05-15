@@ -3,6 +3,7 @@ import 'package:police_command_system/src/core/theme/app_theme.dart';
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:police_command_system/src/features/auth/presentation/login_screen.dart';
+import 'package:police_command_system/src/core/config/api_config.dart';
 
 class SuperAdminScreen extends StatefulWidget {
   const SuperAdminScreen({super.key});
@@ -33,7 +34,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
       final token = prefs.getString('jwt');
       final dio = Dio();
       final response = await dio.get(
-        'http://localhost:3000/api/stations',
+        '${ApiConfig.baseUrl}/api/stations',
         options: Options(headers: {'Authorization': 'Bearer $token'}),
       );
       setState(() {
@@ -50,7 +51,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
       final token = prefs.getString('jwt');
       final dio = Dio();
       await dio.post(
-        'http://localhost:3000/api/stations',
+        '${ApiConfig.baseUrl}/api/stations',
         data: {
           'name': _stationNameController.text,
           'location': _stationLocationController.text,
@@ -72,7 +73,7 @@ class _SuperAdminScreenState extends State<SuperAdminScreen> {
       final token = prefs.getString('jwt');
       final dio = Dio();
       await dio.post(
-        'http://localhost:3000/api/users',
+        '${ApiConfig.baseUrl}/api/users',
         data: {
           'email': _officerEmailController.text,
           'password': _officerPasswordController.text,

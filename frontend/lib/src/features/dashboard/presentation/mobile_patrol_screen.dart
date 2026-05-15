@@ -4,6 +4,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:police_command_system/src/core/theme/app_theme.dart';
 import 'package:police_command_system/src/features/auth/presentation/login_screen.dart';
+import 'package:police_command_system/src/core/config/api_config.dart';
 
 class MobilePatrolScreen extends StatefulWidget {
   const MobilePatrolScreen({super.key});
@@ -26,7 +27,7 @@ class _MobilePatrolScreenState extends State<MobilePatrolScreen> {
   }
 
   void _initSocket() {
-    socket = IO.io('http://localhost:3000', <String, dynamic>{
+    socket = IO.io(ApiConfig.baseUrl, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': true,
     });

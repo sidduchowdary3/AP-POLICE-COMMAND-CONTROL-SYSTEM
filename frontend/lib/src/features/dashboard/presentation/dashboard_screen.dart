@@ -3,6 +3,7 @@ import 'package:socket_io_client/socket_io_client.dart' as IO;
 import 'package:dio/dio.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:police_command_system/src/core/theme/app_theme.dart';
+import 'package:police_command_system/src/core/config/api_config.dart';
 import 'package:police_command_system/src/features/auth/presentation/login_screen.dart';
 import 'widgets/sidebar.dart';
 import 'widgets/stat_card.dart';
@@ -65,7 +66,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _initSocket() {
     // Connect to the local NestJS backend simulator
-    socket = IO.io('http://localhost:3000', <String, dynamic>{
+    socket = IO.io(ApiConfig.baseUrl, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });
@@ -519,7 +520,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               final token = prefs.getString('jwt');
                               final dio = Dio();
                               await dio.post(
-                                'http://localhost:3000/api/users',
+                                '${ApiConfig.baseUrl}/api/users',
                                 data: {'email': _emailCtrl.text, 'password': _passCtrl.text, 'role': 'PERSONNEL'},
                                 options: Options(headers: {'Authorization': 'Bearer $token'}),
                               );
